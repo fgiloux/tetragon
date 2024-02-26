@@ -1,0 +1,242 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.33.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
+    capabilities: Seamless Upgrades
+    categories: Networking,Security
+    features.operators.openshift.io/cni: "false"
+    features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "false" 
+    features.operators.openshift.io/proxy-aware: "true"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "false"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
+    operators.openshift.io/infrastructure-features: '["disconnected"]'
+    repository: https://github.com/cilium/tetragon
+    operatorframework.io/suggested-namespace: tetragon
+    support: https://cilium.herokuapp.com/
+    description: |-
+      **Tetragon Operator** is an Operator pattern for managing Tetragon.
+      Specifcally, the Tetragon Operator manages the deployment of Tetragon,
+      and the replication of pod information for efficient consumption by agents.
+
+      # Tetragon
+
+      Tetragon enables powerful real-time, eBPF-based Security Observability and Runtime Enforcement.
+
+      Tetragon detects and is able to react to security-significant events, such as
+
+        * Process execution events
+        * System call activity
+        * I/O activity including network & file access
+
+      Tetragon is Kubernetes-aware - that is, it understands Kubernetes identities such as namespaces, pods and so on - so that security event detection can be configured in relation to individual workloads.
+
+      # Start using Tetragon
+
+        * Try our quickstart at [tetragon.io](https://tetragon.io/docs/getting-started/).
+        * See our user documentation at [tetragon.io/docs](https://tetragon.io/docs/).
+
+      # License
+
+      Tetragon is distributed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.txt).
+  name: tetragon-operator.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions: {}
+  description: |-
+      **Tetragon Operator** is an Operator pattern for managing Tetragon.
+      Specifcally, the Tetragon Operator manages the deployment of Tetragon,
+      and the replication of pod information for efficient consumption by agents.
+
+      # Tetragon
+      
+      Tetragon enables powerful real-time, eBPF-based Security Observability and Runtime Enforcement.
+
+      Tetragon detects and is able to react to security-significant events, such as
+
+        * Process execution events
+        * System call activity
+        * I/O activity including network & file access
+
+      Tetragon is Kubernetes-aware - that is, it understands Kubernetes identities such as namespaces, pods and so on - so that security event detection can be configured in relation to individual workloads.
+
+      # Start using Tetragon
+
+        * Try our quickstart at [tetragon.io](https://tetragon.io/docs/getting-started/).
+        * See our user documentation at [tetragon.io/docs](https://tetragon.io/docs/).
+
+      # License
+
+      Tetragon is distributed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0.txt).
+  displayName: Tetragon Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - cilium.io
+          resources:
+          - podinfo
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apiextensions.k8s.io
+          resources:
+          - customresourcedefinitions
+          verbs:
+          - create
+        - apiGroups:
+          - apiextensions.k8s.io
+          resources:
+          - customresourcedefinitions
+          resourceNames:
+          - tracingpolicies.cilium.io
+          - tracingpoliciesnamespaced.cilium.io
+          - podinfo.cilium.io
+          verbs:
+          - update
+          - get
+          - list
+          - watch
+        serviceAccountName: tetragon-operator
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - cilium.io
+          resources:
+          - tracingpolicies
+          - tracingpoliciesnamespaced
+          verbs:
+          - get
+          - list
+          - watch
+        # We need to split out the create permission and enforce it without resourceNames since
+        # the name would not be known at resource creation time
+        - apiGroups:
+          - apiextensions.k8s.io
+          resources:
+          - customresourcedefinitions
+          verbs:
+          - get
+          - list
+          - watch
+        serviceAccountName: tetragon
+      deployments:
+      - label:
+          app.kubernetes.io/name: "tetragon-operator"
+          app.kubernetes.io/instance: tetragon
+          app.kubernetes.io/part-of: tetragon
+        name:
+          tetragon-operator
+        spec:
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: "tetragon-operator"
+              app.kubernetes.io/instance: tetragon
+          replicas: 1
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: "tetragon-operator"
+                app.kubernetes.io/instance: tetragon
+            spec:
+              containers:
+              - name: tetragon-operator
+                command:
+                - /usr/bin/tetragon-operator
+                args:
+                - serve
+                - --config-dir=/etc/tetragon/operator.conf.d/
+                image: "quay.io/cilium/tetragon-operator:v1.0.1"
+                imagePullPolicy: IfNotPresent
+                volumeMounts:
+                - mountPath: /etc/tetragon/operator.conf.d/
+                  name: tetragon-operator-config
+                  readOnly: true
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                      - "ALL"
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 10m
+                    memory: 64Mi
+              serviceAccountName: tetragon-operator
+              terminationGracePeriodSeconds: 10
+              volumes:
+                - name: tetragon-operator-config
+                  configMap:
+                    name: tetragon-operator-config
+                    optional: true
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - Tetragon
+  - eBPF
+  - Security
+  - Observability
+  links:
+  - name: Tetragon
+    url: https://tetragon.io
+  maintainers:
+  maturity: alpha
+  provider:
+    name: cilium/tetragon community
+    url: "https://cilium.herokuapp.com/"
+  version: 0.0.1
+
