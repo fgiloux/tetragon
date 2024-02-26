@@ -88,6 +88,7 @@ all: tetragon-bpf tetragon tetra generate-flags test-compile tester-progs protoc
 
 -include Makefile.docker
 -include Makefile.cli
+-include Makefile.bundle
 
 .PHONY: help
 help:

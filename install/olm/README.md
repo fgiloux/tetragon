@@ -6,9 +6,16 @@ on Kubernetes clusters, where OLM is available. OLM comes preinstalled with Open
 
 ## Building and pushing an OLM bundle
 
+Set the variables according to your environment:
 ```bash
-docker build -f bundle.Dockerfile -tag <container-registry-address>/tetragon-bundle:v0.0.1 .
-docker push <container-registry-address>/tetragon-bundle:v0.0.1
+export DOCKER_DEV_ACCOUNT=<your-account>
+export DOCKER_IMAGE_TAG=latest
+export DOCKER_REGISTRY=quay.io
+```
+
+And call the make targets at the root of the git repository:
+```bash
+make bundle-build bundle-push
 ```
 
 ## Deploying the bundle on a cluster
@@ -18,7 +25,7 @@ Prerequisites:
 - The [operator-sdk CLI](https://sdk.operatorframework.io/docs/installation/) has been installed on your machine
 
 ```bash
-kubectl create ns tetration
-operator-sdk run bundle  <container-registry-address>/tetragon-bundle:v0.0.1 -n tetragon
+kubectl create ns tetragon
+operator-sdk run bundle  $DOCKER_REGISTRY/$DOCKER_DEV_ACCOUNT/tetragon-operator-bundle:$DOCKER_IMAGE_TAG -n tetragon
 ```
 
